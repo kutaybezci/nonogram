@@ -1,0 +1,29 @@
+ Nonogram Game by Kutay Bezci
+First part of the screen is nonogram table.
+Game started with 10 length square.
+Cursor only traverse through nonogram board with arrow keys.
+RH: display row hints for the cursor row
+CH: display column hints for the cursor column
+> area for user input
+Line below input is system response
+
+KEYS
+[INSERT]	: fills table at cursor
+[DELETE]	: empty table at cursor
+[END]		: clear fillings table at cursor
+[BACKSPACE]	: clears current user input
+[ESC]		: exits program
+[ENTER]		: send input command to system
+[CHARACTERS]: appends to input command
+
+When input is send it is processed as command
+Commands are processed case insensitive
+[r]		: Set row hint numbers as square blocks with numeric arguments (as: r 1 2 )
+[c]		: Set column hint numbers as square blocks with numeric arguments (as: h 10 1)
+[resize]: Set nonogram game board !RESETS! every thing with single argument (as: resize 10)
+[calc]	: Recalculate hints from table
+[clear] : clear table with out touching hints
+[help]	: show this screen 
+[done] 	: change all undecided to false and checks solution
+[save]	: save table to the argument file path (as: save c:\nonogram.txt)
+[load]	: load table from the argument file path (as: load c:\nonogram.txt)
