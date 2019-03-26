@@ -1,18 +1,9 @@
 package nonogram.solver;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.IntStream;
-
-import com.google.gson.Gson;
-
-import nonogram.data.Nonogram;
 
 public class Solver {
 
@@ -302,59 +293,6 @@ public class Solver {
 		}
 	}
 
-	public static Nonogram load(String fileName) {
-		try {
-			File file = new File(String.format("%s/%s.%s", saveFolder, fileName, fileTypeNono));
-			if (!file.exists() || !file.isFile()) {
-				throw new RuntimeException("File not found");
-			}
-			StringBuilder sb = new StringBuilder();
-			try (FileInputStream fis = new FileInputStream(file)) {
-				while (fis.available() > 0) {
-					sb.append((char) fis.read());
-				}
-			}
-			Gson gson = new Gson();
-			Nonogram nonogram = gson.fromJson(sb.toString(), Nonogram.class);
-			if (nonogram.getFilled() == null) {
-				nonogram.setFilled(new Boolean[nonogram.getSize()][nonogram.getSize()]);
-			}
-			return nonogram;
-		} catch (Exception ex) {
-			throw new RuntimeException(ex);
-		}
-	}
-
-	public static final String saveFolder = "saved";
-	public static final String knowledgeFolder = "kb";
-	public static final String fileTypeNono = "nono";
-
-	public static void save(String fileName, Nonogram nonogram) {
-		try {
-			Gson gson = new Gson();
-			File folder = new File(saveFolder);
-			if (folder.isFile()) {
-				folder.delete();
-			}
-			if (!folder.exists()) {
-				folder.mkdirs();
-			}
-			if (!isDirty(nonogram.getFilled())) {
-				nonogram.setFilled(null);
-			}
-			String tableJson = gson.toJson(nonogram);
-			File file = new File(String.format("%s/%s.%s", folder.getName(), fileName, fileTypeNono));
-			if (!file.exists()) {
-				file.createNewFile();
-			}
-			try (FileOutputStream fos = new FileOutputStream(file)) {
-				fos.write(tableJson.getBytes());
-			}
-		} catch (Exception ex) {
-			throw new RuntimeException(ex);
-		}
-	}
-
 	public static int getUnsolvedCount(Boolean[][] filled) {
 		int unsolvedCount = 0;
 		for (int r = 0; r < filled.length; r++) {
@@ -378,21 +316,4 @@ public class Solver {
 		return false;
 	}
 
-	public static void main(String arg[]) throws FileNotFoundException, IOException {
-		Gson gson = new Gson();
-		StringBuilder sb = new StringBuilder();
-		try (FileInputStream fis = new FileInputStream("cat.txt")) {
-			while (fis.available() > 0) {
-				sb.append((char) fis.read());
-			}
-		}
-		Table table = gson.fromJson(sb.toString(), Table.class);
-		Nonogram nonogram = new Nonogram(25);
-		int[][][] hints = new int[2][][];
-		hints[0] = table.getRowHint();
-		hints[1] = table.getColumnHint();
-		nonogram.setHints(hints);
-		save("cat", nonogram);
-		nonogram = load("cat");
-	}
 }

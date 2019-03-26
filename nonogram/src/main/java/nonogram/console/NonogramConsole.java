@@ -3,6 +3,7 @@ package nonogram.console;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
@@ -129,8 +130,18 @@ public class NonogramConsole extends Thread {
 			save(commandParts);
 		} else if (StringUtils.equalsIgnoreCase("load", commandParts[0])) {
 			this.nonogram = load(commandParts[1]);
+		} else if (StringUtils.equalsIgnoreCase("author", commandParts[0])) {
+			this.info = "Kutay Bezci 2019 kutay.bezci@gmail.com";
+		} else if (StringUtils.equalsIgnoreCase("list", commandParts[0])) {
+			String[] fileNames = this.saved.list(new FilenameFilter() {
+				@Override
+				public boolean accept(File dir, String name) {
+					return name.endsWith(".nono");
+				}
+			});
+			this.info = Arrays.toString(Arrays.stream(fileNames).map(i -> StringUtils.removeEnd(i, ".nono")).toArray());
 		} else {
-			this.info = "commands: r/c/resize/clear/calc/solve/help/done";
+			this.info = "commands: r/c/resize/clear/calc/solve/help/done/save/load/list";
 		}
 	}
 

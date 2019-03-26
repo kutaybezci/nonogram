@@ -2,6 +2,7 @@ package nonogram.solver;
 
 import java.util.Arrays;
 
+@Deprecated
 public class Table {
 	private Boolean[][] filled;
 	private int[][] rowHint;

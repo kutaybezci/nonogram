@@ -21,6 +21,7 @@ import com.googlecode.lanterna.terminal.Terminal;
 
 import nonogram.solver.Table;
 
+@Deprecated
 public class NonogramTableConsole extends Thread {
 	private String info = "";
 	private String input = "";
