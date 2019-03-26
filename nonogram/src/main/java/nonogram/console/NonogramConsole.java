@@ -74,6 +74,7 @@ public class NonogramConsole extends Thread {
 	}
 
 	private void processInput(KeyStroke keyStroke) {
+		this.help = false;
 		if (keyStroke.getKeyType() == KeyType.Escape || keyStroke.getKeyType() == KeyType.EOF) {
 			this.exit = true;
 		} else if (keyStroke.getKeyType() == KeyType.ArrowDown) {
@@ -232,7 +233,6 @@ public class NonogramConsole extends Thread {
 		if (this.help) {
 			this.terminalScreen.setCursorPosition(new TerminalPosition(0, 0));
 			drawHelp();
-			this.help = false;
 		} else {
 			this.terminalScreen.setCursorPosition(new TerminalPosition(this.x, this.y));
 			drawNonogramTable();
