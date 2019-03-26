@@ -1,11 +1,16 @@
 package nonogram.console;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.Arrays;
 import java.util.Scanner;
 
 import org.apache.commons.lang3.StringUtils;
 
+import com.google.gson.Gson;
 import com.googlecode.lanterna.TerminalPosition;
 import com.googlecode.lanterna.TextCharacter;
 import com.googlecode.lanterna.TextColor;
@@ -28,11 +33,15 @@ public class NonogramConsole extends Thread {
 	private TerminalScreen terminalScreen;
 	private Nonogram nonogram;
 	private boolean help = true;
+	private File saved = new File("saved");
 
 	public NonogramConsole(Terminal terminal) throws IOException {
 		this.terminalScreen = new TerminalScreen(terminal);
 		this.terminalScreen.startScreen();
 		this.nonogram = new Nonogram(10);
+		if (!this.saved.exists()) {
+			saved.mkdirs();
+		}
 	}
 
 	private void move() {
@@ -51,9 +60,8 @@ public class NonogramConsole extends Thread {
 	}
 
 	private void drawHelp() {
-		ClassLoader classLoader = getClass().getClassLoader();
-		File helpFile = new File(classLoader.getResource("help.txt").getFile());
-		try (Scanner s = new Scanner(helpFile)) {
+		try (InputStream is = NonogramTableConsole.class.getClassLoader().getResourceAsStream("help.txt");
+				Scanner s = new Scanner(is)) {
 			TextGraphics helpText = this.terminalScreen.newTextGraphics();
 			helpText.setForegroundColor(TextColor.ANSI.GREEN);
 			for (int i = 0; s.hasNextLine(); i++) {
@@ -104,8 +112,10 @@ public class NonogramConsole extends Thread {
 		} else if (StringUtils.equalsIgnoreCase("resize", commandParts[0])) {
 			int size = Integer.parseInt(commandParts[1]);
 			this.nonogram = new Nonogram(size);
+			this.info = "New nonogram created";
 		} else if (StringUtils.equalsIgnoreCase("clear", commandParts[0])) {
 			this.nonogram.clear();
+			this.info = "Cleared";
 		} else if (StringUtils.equalsIgnoreCase("calc", commandParts[0])) {
 			this.nonogram.setHints(Solver.getRow0AndColumn1Hint(this.nonogram.getFilled()));
 		} else if (StringUtils.equalsIgnoreCase("help", commandParts[0])) {
@@ -116,20 +126,64 @@ public class NonogramConsole extends Thread {
 			Solver.checkDone(nonogram.getSize(), nonogram.getFilled(), nonogram.getHints());
 			this.info = "WELL DONE";
 		} else if (StringUtils.equalsIgnoreCase("save", commandParts[0])) {
-			Solver.save(commandParts[1], nonogram);
+			save(commandParts);
 		} else if (StringUtils.equalsIgnoreCase("load", commandParts[0])) {
-			this.nonogram = Solver.load(commandParts[1]);
+			this.nonogram = load(commandParts[1]);
 		} else {
 			this.info = "commands: r/c/resize/clear/calc/solve/help/done";
 		}
 	}
 
+	private Nonogram load(String fileName) {
+		try {
+			File file = new File(String.format("%s/%s.nono", this.saved.getPath(), fileName));
+			if (!file.exists()) {
+				throw new RuntimeException("File not found");
+			}
+			StringBuilder sb = new StringBuilder();
+			try (FileInputStream fis = new FileInputStream(file)) {
+				while (fis.available() > 0) {
+					sb.append((char) fis.read());
+				}
+			}
+			Gson gson = new Gson();
+			Nonogram nonogram = gson.fromJson(sb.toString(), Nonogram.class);
+			if (nonogram.getFilled() == null) {
+				nonogram.setFilled(new Boolean[nonogram.getSize()][nonogram.getSize()]);
+			}
+			this.info = "File Loaded";
+			return nonogram;
+		} catch (Exception ex) {
+			throw new RuntimeException("File cannot be loadded", ex);
+		}
+	}
+
+	private void save(String[] commandParts) {
+		try {
+			Gson gson = new Gson();
+			if (!Solver.isDirty(nonogram.getFilled())) {
+				nonogram.setFilled(null);
+			}
+			String tableJson = gson.toJson(nonogram);
+			File file = new File(String.format("%s/%s.nono", this.saved.getPath(), commandParts[1]));
+			if (!file.exists()) {
+				file.createNewFile();
+			}
+			try (FileOutputStream fos = new FileOutputStream(file)) {
+				fos.write(tableJson.getBytes());
+			}
+			this.info = "Nonogram saved";
+		} catch (Exception ex) {
+			throw new RuntimeException("Cannot save", ex);
+		}
+	}
+
 	private void solve() {
 		Solver.checkHints(this.nonogram.getSize(), this.nonogram.getHints());
-		File file = new File(String.format("%s/%d.txt", Solver.knowledgeFolder, this.nonogram.getSize()));
-		NonogramSolver solver = new NonogramSolver(this.nonogram.getSize(), this.nonogram.getHints(), file);
+		NonogramSolver solver = new NonogramSolver(this.nonogram.getSize(), this.nonogram.getHints());
 		solver.solve();
 		this.nonogram.setFilled(solver.getFilled());
+		this.info = "Nonogram Solved";
 	}
 
 	private static int[] getHintFromCommand(String[] commandParts) {
@@ -176,8 +230,10 @@ public class NonogramConsole extends Thread {
 			textGraphics.setForegroundColor(TextColor.ANSI.WHITE);
 			int[] rowHint = nonogram.getHints()[0][this.y];
 			int[] columnHint = nonogram.getHints()[1][this.x];
-			textGraphics.putString(0, this.nonogram.getSize(), String.format("RH: %s", hintToString(rowHint)));
-			textGraphics.putString(0, this.nonogram.getSize() + 1, String.format("CH: %s", hintToString(columnHint)));
+			textGraphics.putString(0, this.nonogram.getSize(),
+					String.format("RH(%d): %s", this.y + 1, Arrays.toString(rowHint)));
+			textGraphics.putString(0, this.nonogram.getSize() + 1,
+					String.format("CH(%d): %s", this.x + 1, Arrays.toString(columnHint)));
 			textGraphics.putString(0, this.nonogram.getSize() + 2, String.format("> %s", this.input));
 			textGraphics.putString(0, this.nonogram.getSize() + 3, this.info);
 		}
@@ -188,17 +244,6 @@ public class NonogramConsole extends Thread {
 		}
 	}
 
-	public static String hintToString(int hint[]) {
-		StringBuilder sb = new StringBuilder();
-		if (hint != null && hint.length > 0) {
-			for (int i = 0; i < hint.length; i++) {
-				sb.append(hint[i]);
-				sb.append(" ");
-			}
-		}
-		return sb.toString();
-	}
-
 	@Override
 	public void run() {
 		draw();
@@ -207,10 +252,10 @@ public class NonogramConsole extends Thread {
 				KeyStroke keyStroke = this.terminalScreen.pollInput();
 				if (keyStroke != null) {
 					processInput(keyStroke);
-					draw();
 				}
 				this.terminalScreen.doResizeIfNecessary();
-				yield();
+				draw();
+				sleep(100);
 			} catch (Exception ex) {
 				ex.printStackTrace();
 				this.info = ex.getMessage();

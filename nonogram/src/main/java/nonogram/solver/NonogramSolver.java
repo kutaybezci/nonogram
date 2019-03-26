@@ -1,6 +1,5 @@
 package nonogram.solver;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,12 +13,12 @@ public class NonogramSolver {
 	private Boolean[][][][] allSolutions;
 	private KnowledgeBase knowledgeBase;
 
-	public NonogramSolver(int size, int[][][] hints, File disk) {
+	public NonogramSolver(int size, int[][][] hints) {
 		this.hints = hints;
 		this.size = size;
 		this.allSolutions = new Boolean[2][this.size][][];
 		this.filled = new Boolean[this.size][this.size];
-		knowledgeBase = new KnowledgeBase(disk, this.size, this.hints);
+		knowledgeBase = new KnowledgeBase(this.size, this.hints);
 	}
 
 	public int countNull() {
@@ -54,8 +53,13 @@ public class NonogramSolver {
 	}
 
 	public void solve() {
-		while (countNull() > 0) {
-			solveStep();
+		int unsolved = countNull();
+		while (unsolved > 0) {
+			int newUnsolved = solveStep();
+			if (newUnsolved >= unsolved) {
+				throw new RuntimeException("Cannot solve!");
+			}
+			unsolved = newUnsolved;
 		}
 	}
 
@@ -65,8 +69,7 @@ public class NonogramSolver {
 				{ true, true, false }, //
 				{ true, true, true } };
 		int[][][] hints = Solver.getRow0AndColumn1Hint(filled);
-		File kb = new File("c:\\kb\\3.kb");
-		NonogramSolver solver = new NonogramSolver(3, hints, kb);
+		NonogramSolver solver = new NonogramSolver(3, hints);
 		solver.solve();
 		for (int r = 0; r < solver.size; r++) {
 			for (int c = 0; c < solver.size; c++) {

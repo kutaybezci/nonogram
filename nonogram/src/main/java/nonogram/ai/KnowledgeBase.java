@@ -2,6 +2,7 @@ package nonogram.ai;
 
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashMap;
@@ -19,34 +20,65 @@ public class KnowledgeBase {
 	private File disk;
 	private Map<String, Knowledge> memory = new HashMap<>();
 
-	public KnowledgeBase(File disk, int lineSize, int[][][] hints) {
-		this.disk = disk;
+	public KnowledgeBase(int lineSize, int[][][] hints) {
 		this.lineSize = lineSize;
-		if (!disk.exists()) {
-			try {
-				disk.createNewFile();
-			} catch (IOException e) {
-				throw new RuntimeException(e);
+		this.disk = new File(String.format("kb/%d.txt", this.lineSize));
+		try {
+			this.disk.getParentFile().mkdirs();
+			if (!this.disk.exists()) {
+				this.disk.createNewFile();
 			}
+		} catch (IOException ex) {
+			System.out.println("AI cannot learn or remember");
+			ex.printStackTrace();
+			this.disk = null;
 		}
 		remember(hints);
 		learn();
 	}
 
 	private void learn() {
-		try (FileWriter fr = new FileWriter(disk, true); BufferedWriter br = new BufferedWriter(fr)) {
+		FileWriter fr = null;
+		BufferedWriter br = null;
+		try {
+			if (this.disk != null) {
+				try {
+					fr = new FileWriter(disk, true);
+					br = new BufferedWriter(fr);
+				} catch (IOException ex) {
+					this.disk = null;
+					ex.printStackTrace();
+				}
+			}
+
 			Gson gson = new Gson();
 			for (Knowledge knowledge : memory.values()) {
 				if (knowledge.getSolutions() == null) {
 					knowledge.setSolutions(
 							Solver.generateValidCombinations(new Boolean[knowledge.getSize()], knowledge.getHint()));
 					String strKnowledge = gson.toJson(new LitteKnowledge(knowledge));
-					br.write(strKnowledge);
-					br.newLine();
+					if (this.disk != null && br != null) {
+						try {
+							br.write(strKnowledge);
+							br.newLine();
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+
+					}
 				}
 			}
-		} catch (Exception ex) {
-			throw new RuntimeException(ex);
+		} finally {
+			try {
+				if (br != null) {
+					br.close();
+				}
+				if (fr != null) {
+					fr.close();
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 
@@ -59,18 +91,20 @@ public class KnowledgeBase {
 				memory.put(key, new Knowledge(key, this.lineSize, hint, null));
 			}
 		}
-		try (Scanner s = new Scanner(this.disk)) {
-			while (s.hasNextLine()) {
-				String strKnowledge = s.nextLine();
-				LitteKnowledge litteKnowledge = gson.fromJson(strKnowledge, LitteKnowledge.class);
-				String knowledgeKey = gson.toJson(litteKnowledge.getHint());
-				if (memory.containsKey(knowledgeKey)) {
-					Knowledge knowledge = litteKnowledge.toKnowledge();
-					memory.put(knowledgeKey, knowledge);
+		if (this.disk != null) {
+			try (Scanner s = new Scanner(this.disk)) {
+				while (s.hasNextLine()) {
+					String strKnowledge = s.nextLine();
+					LitteKnowledge litteKnowledge = gson.fromJson(strKnowledge, LitteKnowledge.class);
+					String knowledgeKey = gson.toJson(litteKnowledge.getHint());
+					if (memory.containsKey(knowledgeKey)) {
+						Knowledge knowledge = litteKnowledge.toKnowledge();
+						memory.put(knowledgeKey, knowledge);
+					}
 				}
+			} catch (FileNotFoundException e) {
+				e.printStackTrace();
 			}
-		} catch (Exception ex) {
-			throw new RuntimeException(ex);
 		}
 	}
 

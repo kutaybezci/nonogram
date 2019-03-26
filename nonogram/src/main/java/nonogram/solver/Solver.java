@@ -268,7 +268,7 @@ public class Solver {
 		int[][][] hintsFromFilled = Solver.getRow0AndColumn1Hint(filled);
 		for (int rc = 0; rc < hints.length; rc++) {
 			for (int i = 0; i < size; i++) {
-				if (Arrays.equals(hints[rc][i], hintsFromFilled[rc][i])) {
+				if (!Arrays.equals(hints[rc][i], hintsFromFilled[rc][i])) {
 					throw new RuntimeException(String.format("Hint %s is not suitable for %s:%d",
 							Arrays.toString(hints[rc][i]), rc == 0 ? "Row" : "Column", i));
 				}
